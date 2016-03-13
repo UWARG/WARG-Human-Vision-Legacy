@@ -165,12 +165,12 @@ function resetVariables()
 //If no target is selected the file is moved from the 'To process folder' to the 'Deleted folder'
 document.getElementById("NoTarget").onclick = function transferDeleted() 
 {
-    fs.readdir("../human-vision/Images_2_Process", function(err,files3)
+    fs.readdir("Images_2_Process", function(err,files3)
         {
             if (err) throw err;
             //console.log(files3);        
             
-            fs.rename("../human-vision/Images_2_Process/" + files3[0],"../human-vision/Deleted/" + files3[0], function(err) 
+            fs.rename("Images_2_Process/" + files3[0],"Deleted/" + files3[0], function(err) 
                 {
                     if (err) throw err;
                     alert("File successfully Deleted");
@@ -186,12 +186,12 @@ document.getElementById("Load").onclick = function loadNewImage()
     resetOnscreenDisplay();
     clearDisplays();
 
-    fs.readdir("../human-vision/Images_2_Process", function(err, files2)
+    fs.readdir("Images_2_Process", function(err, files2)
     {
         if (err) throw err;
         //console.log(files2);
 
-        address2 = "../human-vision/Images_2_Process/" + files2[0];
+        address2 = "Images_2_Process/" + files2[0];
 
         var img = new Image();
         img.src = address2;
@@ -205,32 +205,34 @@ document.getElementById("Load").onclick = function loadNewImage()
         };
 
         // Retrives metadata from image
-        new ExifImage({ image : address2 }, function (error, exifData) {
-        if (error)
-        console.log("Error: "+error.message);
-        else
-            meta = exifData.exif.UserComment.toString();
-            meta_Data = meta.split(" "); // 0 = Lat, 1=Long, 2=Altitude, 3=Heading, 4=Timestamp (optional)
-            console.log(meta_Data);
-        });
+        // new ExifImage({ image : address2 }, function (error, exifData) {
+        // if (error)
+        // console.log("Error: "+error.message);
+        // else
+        //     meta = exifData.exif.UserComment.toString();
+        //     meta_Data = meta.split(" "); // 0 = Lat, 1=Long, 2=Altitude, 3=Heading, 4=Timestamp (optional)
+        //     console.log(meta_Data);
+        // });
     });
 
         //Reading metadata from .txt files
-    fs.readdir("../human-vision/Metadata", function(err, files4)
+    fs.readdir("Metadata", function(err, files4)
     {
         if (err) throw err;
             
-        address4 = "../human-vision/Metadata/" + files4[0];
+        address4 = "Metadata/" + files4[0];
         
         // Asynchronous read data from file into an array
         fs.readFile(address4, "UTF-8", function (err, data) 
         {
-            if (err) throw err;
-            {
+            if (err) {
+
+                throw err;
+            }
+            else{
                 imageData = data.split(","); // removes all "," from the string so "1,2,3" => "1","2","3"
 
                 metadata2Variables();
-            
             }
         });
 
@@ -294,13 +296,13 @@ document.getElementById("Compute").onclick = function Compute()
 //If no target is selected the file is moved from the 'To process folder' to the 'Processed folder'
 document.getElementById("Process").onclick = function transferProcessed()
 {
-    fs.readdir("../human-vision/Images_2_Process", function(err,files3)
+    fs.readdir("Images_2_Process", function(err,files3)
     {
         if (err) throw err;
 
         data2Master();
 
-        fs.rename("../human-vision/Images_2_Process/" + files3[0],"../human-vision/Processed_Images/" + files3[0], function(err)
+        fs.rename("Images_2_Process/" + files3[0],"Processed_Images/" + files3[0], function(err)
         {
             if (err) throw err;
             alert("File successfully Processed");
@@ -629,7 +631,7 @@ function data2Master()
 
 function write2DataLog()
 {
-    fs.appendFile("C:/Users/Eric/human-vision/DataLogs/Log.txt", masterData +"\r\n", function(err) // \r\n is a line break
+    fs.appendFile("DataLogs/Log.txt", masterData +"\r\n", function(err) // \r\n is a line break
         {  
             if (err) throw err;
         }
