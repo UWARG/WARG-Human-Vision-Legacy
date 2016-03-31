@@ -1,7 +1,5 @@
 /*************************************************************************************************
-
                                     Defined Variables
-
 *************************************************************************************************/
 // Requires
 var fs = require("fs"); // Filesystem
@@ -22,11 +20,11 @@ var masterData = new Array(); // Stores all data collected and computed for each
 var masterCounter; // Stores data into order of array. 0=Timestamp ...... (finish for rest of array data)
 
 // Universal constants
-var R = 6371 // km
+var R = 6371000 // m
 var centerPixelWidth = 768;
 var centerPixelHeight = 432;
-var pixelWRad = 0.061458*Math.PI/180; // rad comes from Width IFOV calc 94.4/1536
-var pixelHRad = 0.063657*Math.PI/180; // rad comes from Height IFOV calc 55/864
+var pixelWRad = 0.061458333333333*Math.PI/180; //M_FOV_W  rad comes from Width IFOV calc 94.4/1536
+var pixelHRad = 0.063657407407407*Math.PI/180; //M_FOV_H  rad comes from Height IFOV calc 55/864
 
 // Data obtained from metadata
 var timestamp; // Timestamp when image was taken
@@ -109,9 +107,7 @@ var address4; // Address for first text file corresponding to loaded image
 var imageData = new Array(); // Stores metadata read from file
 
 /*************************************************************************************************
-
                         Function For Resetting All Variables
-
 *************************************************************************************************/
 function resetVariables()
 {
@@ -154,12 +150,10 @@ function resetVariables()
     countQR=0;
 
     meta_Data=[];
-    //QRCodeScannedData=0; Will display error code when this is commented out
+    QRCodeScannedData=0; //Will display error code when this is commented out
 }
 /*************************************************************************************************
-
                                 BUTTON CLICKING FUNCTIONS
-
 *************************************************************************************************/
 
 //If no target is selected the file is moved from the 'To process folder' to the 'Deleted folder'
@@ -200,7 +194,7 @@ document.getElementById("Load").onclick = function loadNewImage()
 
         img.onload = function() 
         {
-            ctx.drawImage(img,0,0,1536,864);
+            ctx.drawImage(img,0,0,1536,864); // 1536,864
             img.style.display = 'none';
         };
 
@@ -239,11 +233,11 @@ document.getElementById("Load").onclick = function loadNewImage()
 
 // Enables the double click action to select verticies of a target
 document.getElementById("SelectVerticies").onclick = function SelectVerticies()
-    {
-        removeEventListeners();
+{
+    removeEventListeners();
 
-        coordinates[counter]=document.addEventListener("dblclick", getSelectVerticies, false);
-    };
+    coordinates[counter]=document.addEventListener("dblclick", getSelectVerticies, false);
+};
 
 document.getElementById("ProbeDropLoc").onclick = function ProbeDropLoc()
 {
@@ -261,7 +255,7 @@ document.getElementById("PointTarget").onclick = function PointTrargetLoc()
 
 document.getElementById("QRCode").onclick= function QRCode()
 {
-   removeEventListeners();
+    removeEventListeners();
 
     QRCodeCoords[countQR]=document.addEventListener("dblclick",getQRCodeCoords,false);
 }
@@ -283,10 +277,7 @@ document.getElementById("Compute").onclick = function Compute()
                 connectClickedPoints();
                 distBetweenPoints();
                 calculateArea();
-                //computeArea(); Simpler method ... broken
-
                 calculateCentroidCoords();
-
                 data2Screen();
             }
     };
@@ -310,9 +301,7 @@ document.getElementById("Process").onclick = function transferProcessed()
 };
 
 /*************************************************************************************************
-
     Event Listener Functions for Select Verticies, Probe Drop, Point Target and QR Code Buttons
-
 *************************************************************************************************/
 
 // Obtains XY coordinates of the click on the canvas image and places a red square on layer2 on the location of the click
@@ -454,41 +443,39 @@ function removeEventListeners()
 }
 
 /*************************************************************************************************
-
                         Functions for On Screen Display of Data
-
 *************************************************************************************************/
 
 function data2Screen()
 {
     if (typeof AreaTotal !== 'undefined' && AreaTotal !== null && AreaTotal !==0)
     {
-        document.getElementById("AreaCalc").innerHTML = AreaTotal+" m^2";
+        document.getElementById("AreaCalc").innerHTML = Math.round(AreaTotal)+" m^2";
     }
 
     if (typeof centroidLat>0 || centroidLat<0 && centroidLat !==0 && typeof centroidLong>0 || centroidLong<0 && centroidLong!==0)
     {
-        document.getElementById("CentroidCalc").innerHTML = centroidLat*180/Math.PI+","+centroidLong*180/Math.PI;
+        document.getElementById("CentroidCalc").innerHTML = (centroidLat*180/Math.PI).toPrecision(8)+","+(centroidLong*180/Math.PI).toPrecision(8); // 8 specifies #sigdigs in this case it is 6 decimal places
     }
 
     if (typeof GPSClickedCoordsProbeDrop[0] !== 'undefined' && GPSClickedCoordsProbeDrop[0] !== null && GPSClickedCoordsProbeDrop[0] !==0 && typeof GPSClickedCoordsProbeDrop[1] !== 'undefined' && GPSClickedCoordsProbeDrop[1] !== null && GPSClickedCoordsProbeDrop[1] !==0)
     {
-        document.getElementById("ProbeDropCalc").innerHTML = GPSClickedCoordsProbeDrop[0]*180/Math.PI+","+GPSClickedCoordsProbeDrop[1]*180/Math.PI;    
+        document.getElementById("ProbeDropCalc").innerHTML = (GPSClickedCoordsProbeDrop[0]*180/Math.PI).toPrecision(8)+","+(GPSClickedCoordsProbeDrop[1]*180/Math.PI).toPrecision(8);    
     }
 
     if (GPSClickedCoordsPointTarget[0] !== 'undefined' && GPSClickedCoordsPointTarget[0] !== null && GPSClickedCoordsPointTarget[0] !==0 && typeof GPSClickedCoordsPointTarget[1] !== 'undefined' && GPSClickedCoordsPointTarget[1] !== null && GPSClickedCoordsPointTarget[1] !==0)
     { 
-        document.getElementById("PointTargetCalcPT1").innerHTML = GPSClickedCoordsPointTarget[0]*180/Math.PI+","+GPSClickedCoordsPointTarget[1]*180/Math.PI;
+        document.getElementById("PointTargetCalcPT1").innerHTML = (GPSClickedCoordsPointTarget[0]*180/Math.PI).toPrecision(8)+","+(GPSClickedCoordsPointTarget[1]*180/Math.PI).toPrecision(8);
     }
 
     if (GPSClickedCoordsPointTarget[2] !== 'undefined' && GPSClickedCoordsPointTarget[2] !== null && GPSClickedCoordsPointTarget[2] !==0 && typeof GPSClickedCoordsPointTarget[3] !== 'undefined' && GPSClickedCoordsPointTarget[3] !== null && GPSClickedCoordsPointTarget[3] !==0)
     { 
-        document.getElementById("PointTargetCalcPT2").innerHTML = GPSClickedCoordsPointTarget[2]*180/Math.PI+","+GPSClickedCoordsPointTarget[3]*180/Math.PI;
+        document.getElementById("PointTargetCalcPT2").innerHTML = (GPSClickedCoordsPointTarget[2]*180/Math.PI).toPrecision(8)+","+(GPSClickedCoordsPointTarget[3]*180/Math.PI).toPrecision(8);
     }
 
     if (GPSClickedCoordsPointTarget[4] !== 'undefined' && GPSClickedCoordsPointTarget[4] !== null && GPSClickedCoordsPointTarget[4] !==0 && typeof GPSClickedCoordsPointTarget[5] !== 'undefined' && GPSClickedCoordsPointTarget[5] !== null && GPSClickedCoordsPointTarget[5] !==0)
     { 
-        document.getElementById("PointTargetCalcPT3").innerHTML = GPSClickedCoordsPointTarget[4]*180/Math.PI+","+GPSClickedCoordsPointTarget[5]*180/Math.PI;
+        document.getElementById("PointTargetCalcPT3").innerHTML = (GPSClickedCoordsPointTarget[4]*180/Math.PI).toPrecision(8)+","+(GPSClickedCoordsPointTarget[5]*180/Math.PI).toPrecision(8);
     }
     if (QRCodeScannedData !== 'Undefined' && QRCodeCoords !== null && QRCodeScannedData!==0)
     {
@@ -521,9 +508,7 @@ function clearDisplays()
 }
 
 /*************************************************************************************************
-
                         Function For Connecting of Clicked Points
-
 *************************************************************************************************/
 // Connects Selected Verticies With A Line
 function connectClickedPoints()
@@ -546,9 +531,7 @@ function connectClickedPoints()
 }
 
 /*************************************************************************************************
-
                     Functions For Reading Image Metadata and QR Code Data
-
 *************************************************************************************************/
 function metadata2Variables()
 {
@@ -589,9 +572,7 @@ function transferQRCodeImage()
         qr.decode(imgData1); // decodes the QR Code to get the result
     }
 /*************************************************************************************************
-
         Functions For Adding Data to Master Array and Printing Master Array to Data Log
-
 *************************************************************************************************/
 function data2Master()
 {
@@ -636,18 +617,15 @@ function write2DataLog()
 )};
 
 /*************************************************************************************************
-
         Functions to Calculate GPS Coordinate from Click Location
-
 *************************************************************************************************/
 // Takes Clicked Pixel Coordinates and Calculates Distance From Known GPS Coordiate
 function pixelDistanceFromCenter()
 {
     
-    deltaW= altitude*Math.tan((pixelW2-centerPixelWidth)*pixelWRad); // km
-    deltaH= altitude*Math.tan((pixelH2-centerPixelHeight)*pixelHRad); // km
-    distance= Math.sqrt(deltaW*deltaW+deltaH*deltaH); // km
-    //alert(distance+"km");
+    deltaW= altitude*Math.tan((pixelW2-centerPixelWidth)*pixelWRad); // in m
+    deltaH= altitude*Math.tan((pixelH2-centerPixelHeight)*pixelHRad); // in m
+    distance= Math.sqrt(deltaW*deltaW+deltaH*deltaH); // in m
 };
 
 // Calculates new GPS Coordinate based on distance from known GPS Coordinate
@@ -658,9 +636,7 @@ function computeNewCoordinates()
 };
 
 /*************************************************************************************************
-
 Stores Calculated GPS Coordinates in an appropriate array for Select Verticies, Probe Drop and Point Target
-
 *************************************************************************************************/
 function storeClickedCoords()
 {
@@ -680,7 +656,6 @@ function storePDClickedCoords()
 
     GPSClickedCoordsProbeDrop[countPDIndex]=long2;
     countPDIndex++;
-    //alert(GPSClickedCoordsProbeDrop);
 }
 
 function storePTClickedCoords()
@@ -690,14 +665,10 @@ function storePTClickedCoords()
     
     GPSClickedCoordsPointTarget[countPTIndex]=long2;
     countPTIndex++;
-
-    //alert(GPSClickedCoordsPointTarget);
 }
 
 /*************************************************************************************************
-
         Compute GPS Coordinates for Select Verticies, Probe Drop and Point Target
-
 *************************************************************************************************/
 // Uses Distance calculated from click to compute new GPS coordinate based on 9 cases
 function computeGPSCoordFromCase()
@@ -785,7 +756,7 @@ function computeSelectVerticiesGPSCoord()
     pixelDistanceFromCenter();
     computeGPSCoordFromCase();
     storeClickedCoords();
-};
+}
 
 function computeProbeDropGPSCoords()
 {
@@ -802,9 +773,7 @@ function computePointTargetGPSCoords()
 }
 
 /*************************************************************************************************
-
             Computes the distance between two GPS Coordinates
-
 *************************************************************************************************/
 function distBetweenPoints()
 {   
@@ -825,20 +794,16 @@ function distBetweenPoints()
             //alert("case 2");
         }
 
-        groundDistBetweenPoints[counter3]=R*c*1000; // converted to m
+        groundDistBetweenPoints[counter3]=R*c; // in m
     
         counter1+=2;
         counter2+=2;
         counter3+=1;
     }
-
-    //alert("Distance is "+groundDistBetweenPoints);
 }
 
 /*************************************************************************************************
-
             Computes additional distances needed for calculating area
-
 *************************************************************************************************/
 function computeExtraDistances()
 {
@@ -853,7 +818,7 @@ function computeExtraDistances()
         {
             a = Math.pow(Math.sin((GPSClickedCoords[latCoordIndex]-GPSClickedCoords[0])/2),2)+Math.cos(GPSClickedCoords[latCoordIndex])*Math.cos(GPSClickedCoords[0])*Math.pow(Math.sin(GPSClickedCoords[latCoordIndex+1]-GPSClickedCoords[1])/2,2);
             c = 2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-            groundDistBetweenPoints[index_dist]=R*c*1000;
+            groundDistBetweenPoints[index_dist]=R*c; // in m
 
             //alert("Extra length: "+groundDistBetweenPoints[index_dist]);
             //alert("index is: "+latCoordIndex);
@@ -864,44 +829,42 @@ function computeExtraDistances()
     }
 }
 /*************************************************************************************************
-
                 Function for Computing the Area of the Target
-
 *************************************************************************************************/
 // Master function to check which shape the area is based on number of clicks
 function calculateArea()
 {
     if(groundDistBetweenPoints.length==3)
     {
-        alert("triangle case");
+        //alert("triangle case");
         triangleArea();
     }
     else if(groundDistBetweenPoints.length==4)
     {
-        alert("4 Sided figure case")
+        //alert("4 Sided figure case")
         squareArea();
     }
     else if(groundDistBetweenPoints.length==5)
     {
-        alert("pentagon case");
+        //alert("pentagon case");
         pentagonArea();
     }
     else if(groundDistBetweenPoints.length==6)
     {
-        alert("hexagon case");
+        //alert("hexagon case");
         hexagonArea();
     }
     else if(groundDistBetweenPoints.length==7)
     {
-        alert("heptagon case");
+        //alert("heptagon case");
         heptagonArea();
     }
     else if(groundDistBetweenPoints.length==8)
     {
-        alert("octagon case");
+        //alert("octagon case");
         octagonArea();
     }
-    alert("Area is "+AreaTotal);
+    //alert("Area is "+AreaTotal);
 }
 
 // Component functions for calculating the area of each shape
@@ -996,7 +959,6 @@ function octagonArea()
     AreaTotal = A.reduce(function(pv, cv) { return pv + cv; }, 0);
 }
 
-
 function areaCalcCase2()
 {
     numIterations;
@@ -1022,9 +984,7 @@ function areaCalcCase2()
         }
 }
 /*************************************************************************************************
-
                 Function for calculating the centroid of selected target area
-
 *************************************************************************************************/
 function calculateCentroidCoords()
 {
@@ -1035,8 +995,8 @@ function calculateCentroidCoords()
         sumLong+=GPSClickedCoords[p];
         p++;
     }
-
+    console.log(GPSClickedCoords);
     centroidLat=sumLat/(GPSClickedCoords.length/2);//*180/Math.PI; // convert to deg
     centroidLong=sumLong/(GPSClickedCoords.length/2);//*180/Math.PI; // convert to deg
-    alert(centroidLat+", "+centroidLong);
+    //alert(centroidLat+", "+centroidLong);
 }
