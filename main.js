@@ -19,12 +19,18 @@ var coordsCount=0; // coordsCount/2 = number of Points clicked. Even values = La
 var masterData = new Array(); // Stores all data collected and computed for each image. (Write out final format for the order of array here)
 var masterCounter; // Stores data into order of array. 0=Timestamp ...... (finish for rest of array data)
 
-// Universal constants
+// Universal constant
 var R = 6371000 // m
-var centerPixelWidth = 768;
-var centerPixelHeight = 432;
-var pixelWRad = 0.061458333333333*Math.PI/180; //M_FOV_W  rad comes from Width IFOV calc 94.4/1536
-var pixelHRad = 0.063657407407407*Math.PI/180; //M_FOV_H  rad comes from Height IFOV calc 55/864
+
+// Image constants based on image size
+var imageWidth = document.getElementById('myCanvas').width;
+var imageHeight = document.getElementById('myCanvas').height;
+
+var centerPixelWidth = Math.round(imageWidth/2); // width coord of center pixel
+var centerPixelHeight = Math.round(imageHeight/2); // height coord of center pixel
+
+var pixelWRad = (94.4/imageWidth)*Math.PI/180; //M_FOV_W  rad comes from Width IFOV
+var pixelHRad = (55/imageHeight)*Math.PI/180; //M_FOV_H  rad comes from Height IFOV
 
 // Data obtained from metadata
 var timestamp; // Timestamp when image was taken
@@ -105,6 +111,9 @@ var meta_Data = new Array(); // Splits the string into component strings, isolat
 // For metadata read from .csv file
 var address4; // Address for first text file corresponding to loaded image
 var imageData = new Array(); // Stores metadata read from file
+
+var windowW = window.innerWidth-400; // window.innerWidth/Height is read only that is why it is done this way
+var windowH = window.innerHeight-50;
 
 /*************************************************************************************************
                         Function For Resetting All Variables
@@ -189,14 +198,6 @@ document.getElementById("Load").onclick = function loadNewImage()
 
         var img = new Image();
         img.src = address2;
-        var canvas = document.getElementById('myCanvas');
-        var ctx = canvas.getContext('2d');
-
-        img.onload = function() 
-        {
-            ctx.drawImage(img,0,0,1536,864); // 1536,864
-            img.style.display = 'none';
-        };
 
         // Retrives metadata from image
         // new ExifImage({ image : address2 }, function (error, exifData) {
@@ -207,9 +208,18 @@ document.getElementById("Load").onclick = function loadNewImage()
         //     meta_Data = meta.split(" "); // 0 = Lat, 1=Long, 2=Altitude, 3=Heading, 4=Timestamp (optional)
         //     console.log(meta_Data);
         // });
-    });
 
-        //Reading metadata from .txt files
+        img.onload = function() 
+        {
+            var canvas = document.getElementById('myCanvas');
+            var ctx = canvas.getContext('2d');
+            ctx.translate(canvas.width,0);
+            ctx.rotate(90*Math.PI/180);
+            ctx.drawImage(img,0,0,windowW,windowH); // 1536,864
+            img.style.display = 'none';
+        };
+
+                //Reading metadata from .txt files
     fs.readdir("Metadata", function(err, files4)
     {
         if (err) throw err;
@@ -223,7 +233,7 @@ document.getElementById("Load").onclick = function loadNewImage()
 
                 throw err;
             }
-            else{
+            else {
                 imageData = data.split(","); // removes all "," from the string so "1,2,3" => "1","2","3"
 
                 metadata2Variables();
@@ -231,6 +241,9 @@ document.getElementById("Load").onclick = function loadNewImage()
         });
 
     });
+
+    });
+
 };
 
 // Enables the double click action to select verticies of a target
@@ -313,7 +326,7 @@ function getSelectVerticies(e)
         if (counter>=16)
             {
                 document.removeEventListener("dblclick",getSelectVerticies,false);
-                alert("removed click listener");
+                //alert("removed click listener");
             }
 
         else
