@@ -21,15 +21,16 @@ var masterCounter; // Stores data into order of array. 0=Timestamp ...... (finis
 
 // Universal constant
 var R = 6371000 // m
+var aspectRatio = 1.7777; //1920/1080 (16:9)
 
 // Image constants based on image size
 var imageWidth = document.getElementById('myCanvas').width;
-var imageHeight = document.getElementById('myCanvas').height;
+var imageHeight = imageWidth/aspectRatio; //quick and dirty way to maintain aspect ratio
 
 var centerPixelWidth = Math.round(imageWidth/2); // width coord of center pixel
 var centerPixelHeight = Math.round(imageHeight/2); // height coord of center pixel
 
-var pixelWRad = (94.4/imageWidth)*Math.PI/180; //M_FOV_W  rad comes from Width IFOV
+var pixelWRad = (90/imageWidth)*Math.PI/180; //M_FOV_W  rad comes from Width IFOV
 var pixelHRad = (55/imageHeight)*Math.PI/180; //M_FOV_H  rad comes from Height IFOV
 
 // Data obtained from metadata
@@ -111,9 +112,6 @@ var meta_Data = new Array(); // Splits the string into component strings, isolat
 // For metadata read from .csv file
 var address4; // Address for first text file corresponding to loaded image
 var imageData = new Array(); // Stores metadata read from file
-
-var windowW = window.innerWidth-400; // window.innerWidth/Height is read only that is why it is done this way
-var windowH = window.innerHeight-50;
 
 /*************************************************************************************************
                         Function For Resetting All Variables
@@ -213,9 +211,9 @@ document.getElementById("Load").onclick = function loadNewImage()
         {
             var canvas = document.getElementById('myCanvas');
             var ctx = canvas.getContext('2d');
-            ctx.translate(canvas.width,0);
-            ctx.rotate(90*Math.PI/180);
-            ctx.drawImage(img,0,0,windowW,windowH); // 1536,864
+            //ctx.translate(canvas.width,0);
+            //ctx.rotate(90*Math.PI/180);
+            ctx.drawImage(img,0,0,imageWidth,imageHeight);
             img.style.display = 'none';
         };
 
@@ -470,27 +468,27 @@ function data2Screen()
 
     if (typeof centroidLat>0 || centroidLat<0 && centroidLat !==0 && typeof centroidLong>0 || centroidLong<0 && centroidLong!==0)
     {
-        document.getElementById("CentroidCalc").innerHTML = (centroidLat*180/Math.PI).toPrecision(8)+","+(centroidLong*180/Math.PI).toPrecision(8); // 8 specifies #sigdigs in this case it is 6 decimal places
+        document.getElementById("CentroidCalc").innerHTML = (centroidLat*180/Math.PI).toPrecision(10)+","+(centroidLong*180/Math.PI).toPrecision(10); // 10 specifies #sigdigs in this case it is 8 decimal places
     }
 
     if (typeof GPSClickedCoordsProbeDrop[0] !== 'undefined' && GPSClickedCoordsProbeDrop[0] !== null && GPSClickedCoordsProbeDrop[0] !==0 && typeof GPSClickedCoordsProbeDrop[1] !== 'undefined' && GPSClickedCoordsProbeDrop[1] !== null && GPSClickedCoordsProbeDrop[1] !==0)
     {
-        document.getElementById("ProbeDropCalc").innerHTML = (GPSClickedCoordsProbeDrop[0]*180/Math.PI).toPrecision(8)+","+(GPSClickedCoordsProbeDrop[1]*180/Math.PI).toPrecision(8);    
+        document.getElementById("ProbeDropCalc").innerHTML = (GPSClickedCoordsProbeDrop[0]*180/Math.PI).toPrecision(10)+","+(GPSClickedCoordsProbeDrop[1]*180/Math.PI).toPrecision(10);    
     }
 
     if (GPSClickedCoordsPointTarget[0] !== 'undefined' && GPSClickedCoordsPointTarget[0] !== null && GPSClickedCoordsPointTarget[0] !==0 && typeof GPSClickedCoordsPointTarget[1] !== 'undefined' && GPSClickedCoordsPointTarget[1] !== null && GPSClickedCoordsPointTarget[1] !==0)
     { 
-        document.getElementById("PointTargetCalcPT1").innerHTML = (GPSClickedCoordsPointTarget[0]*180/Math.PI).toPrecision(8)+","+(GPSClickedCoordsPointTarget[1]*180/Math.PI).toPrecision(8);
+        document.getElementById("PointTargetCalcPT1").innerHTML = (GPSClickedCoordsPointTarget[0]*180/Math.PI).toPrecision(10)+","+(GPSClickedCoordsPointTarget[1]*180/Math.PI).toPrecision(10);
     }
 
     if (GPSClickedCoordsPointTarget[2] !== 'undefined' && GPSClickedCoordsPointTarget[2] !== null && GPSClickedCoordsPointTarget[2] !==0 && typeof GPSClickedCoordsPointTarget[3] !== 'undefined' && GPSClickedCoordsPointTarget[3] !== null && GPSClickedCoordsPointTarget[3] !==0)
     { 
-        document.getElementById("PointTargetCalcPT2").innerHTML = (GPSClickedCoordsPointTarget[2]*180/Math.PI).toPrecision(8)+","+(GPSClickedCoordsPointTarget[3]*180/Math.PI).toPrecision(8);
+        document.getElementById("PointTargetCalcPT2").innerHTML = (GPSClickedCoordsPointTarget[2]*180/Math.PI).toPrecision(10)+","+(GPSClickedCoordsPointTarget[3]*180/Math.PI).toPrecision(10);
     }
 
     if (GPSClickedCoordsPointTarget[4] !== 'undefined' && GPSClickedCoordsPointTarget[4] !== null && GPSClickedCoordsPointTarget[4] !==0 && typeof GPSClickedCoordsPointTarget[5] !== 'undefined' && GPSClickedCoordsPointTarget[5] !== null && GPSClickedCoordsPointTarget[5] !==0)
     { 
-        document.getElementById("PointTargetCalcPT3").innerHTML = (GPSClickedCoordsPointTarget[4]*180/Math.PI).toPrecision(8)+","+(GPSClickedCoordsPointTarget[5]*180/Math.PI).toPrecision(8);
+        document.getElementById("PointTargetCalcPT3").innerHTML = (GPSClickedCoordsPointTarget[4]*180/Math.PI).toPrecision(10)+","+(GPSClickedCoordsPointTarget[5]*180/Math.PI).toPrecision(10);
     }
     if (QRCodeScannedData !== 'Undefined' && QRCodeCoords !== null && QRCodeScannedData!==0)
     {
