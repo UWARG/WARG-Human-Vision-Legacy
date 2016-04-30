@@ -24,14 +24,29 @@ var R = 6371000 // m
 var aspectRatio = 1.7777; //1920/1080 (16:9)
 
 // Image constants based on image size
-var imageWidth = document.getElementById('myCanvas').width;
-var imageHeight = imageWidth/aspectRatio; //quick and dirty way to maintain aspect ratio
 
-var centerPixelWidth = Math.round(imageWidth/2); // width coord of center pixel
-var centerPixelHeight = Math.round(imageHeight/2); // height coord of center pixel
+var imageWidth;
+var imageHeight;
+var centerPixelWidth;
+var centerPixelHeight;
+var distPerPx_W;
+var distPerPx_H;
+var FOV_W = 90*Math.PI/180 // FOV deg converted to rad
+var FOV_H = 50.6*Math.PI/180; // 50.6 FOV deg converted to rad
 
-var pixelWRad = (90/imageWidth)*Math.PI/180; //M_FOV_W  rad comes from Width IFOV
-var pixelHRad = (55/imageHeight)*Math.PI/180; //M_FOV_H  rad comes from Height IFOV
+function imageConstants()
+{  
+    imageWidth = document.getElementById('myCanvas').width;
+    imageHeight = imageWidth/aspectRatio; //quick and dirty way to maintain aspect ratio
+
+    centerPixelWidth = Math.round(imageWidth/2); // width coord of center pixel
+    centerPixelHeight = Math.round(imageHeight/2); // height coord of center pixel
+
+    distPerPx_W = altitude*Math.tan(FOV_W/2)/(imageWidth/2);
+    distPerPx_H = altitude*Math.tan(FOV_H/2)/(imageHeight/2);
+
+    //alert("distPerPx_W: "+distPerPx_W+" distPerPx_H: "+distPerPx_H);
+}
 
 // Data obtained from metadata
 var timestamp; // Timestamp when image was taken
@@ -51,6 +66,8 @@ var lat2; // calculated latitude of selected point
 var long2; // calculated longitude of selected point
 var deltaW; // distance from GPS Latitude coodinate to selected Coordinate Latitude on the ground
 var deltaH; // distance from GPS Longitude coodinate to selected Coordinate Longitude on the ground
+var deltaW_rotated // converted distance from GPS Latitude corrdinate taking into account the aircrafts heading
+var deltaH_rotated // converted distance from GPS Longitude corrdinated taking into account the aircrafts heading
 var distance; // distance on the ground between the center GPS Coordinate and the Selected Coordinate
 
 var address2; // Address for first document in the Images2Process folder
@@ -112,6 +129,10 @@ var meta_Data = new Array(); // Splits the string into component strings, isolat
 // For metadata read from .csv file
 var address4; // Address for first text file corresponding to loaded image
 var imageData = new Array(); // Stores metadata read from file
+
+$(window).resize(function() {
+    // not doing anything with this resize but it works
+})
 
 /*************************************************************************************************
                         Function For Resetting All Variables
@@ -206,18 +227,8 @@ document.getElementById("Load").onclick = function loadNewImage()
         //     meta_Data = meta.split(" "); // 0 = Lat, 1=Long, 2=Altitude, 3=Heading, 4=Timestamp (optional)
         //     console.log(meta_Data);
         // });
-
-        img.onload = function() 
-        {
-            var canvas = document.getElementById('myCanvas');
-            var ctx = canvas.getContext('2d');
-            //ctx.translate(canvas.width,0);
-            //ctx.rotate(90*Math.PI/180);
-            ctx.drawImage(img,0,0,imageWidth,imageHeight);
-            img.style.display = 'none';
-        };
-
-                //Reading metadata from .txt files
+    
+    //Reading metadata from .txt files
     fs.readdir("Metadata", function(err, files4)
     {
         if (err) throw err;
@@ -240,6 +251,15 @@ document.getElementById("Load").onclick = function loadNewImage()
 
     });
 
+        img.onload = function() 
+        {
+            imageConstants();
+            var canvas = document.getElementById('myCanvas');
+            var ctx = canvas.getContext('2d');
+            ctx.drawImage(img,0,0,imageWidth,imageHeight);
+            img.style.display = 'none';
+        };
+
     });
 
 };
@@ -252,12 +272,12 @@ document.getElementById("SelectVerticies").onclick = function SelectVerticies()
     coordinates[counter]=document.addEventListener("dblclick", getSelectVerticies, false);
 };
 
-document.getElementById("ProbeDropLoc").onclick = function ProbeDropLoc()
-{
-    removeEventListeners();
+// document.getElementById("ProbeDropLoc").onclick = function ProbeDropLoc()
+// {
+//     removeEventListeners();
 
-    probeDropCoords[countPD]=document.addEventListener("dblclick",getProbeDropCoords,false);
-}
+//     probeDropCoords[countPD]=document.addEventListener("dblclick",getProbeDropCoords,false);
+// }
 
 document.getElementById("PointTarget").onclick = function PointTrargetLoc()
 {
@@ -592,30 +612,34 @@ function data2Master()
 
     var now = new moment();
     
-    masterData[0]=now.format("HH:mm:ss");
+    masterData[0]=now.format("HH:mm:ss"); // timestamp
 
     masterCounter=1;
 
-    masterData[masterCounter]=A;
+    masterData[masterCounter]=AreaTotal.toPrecision(5); //area
     masterCounter++;
 
-    masterData[masterCounter]=centroidLat;
+    masterData[masterCounter]=(centroidLat*180/Math.PI).toPrecision(10); // centroid lat converted from rad to deg
     masterCounter++;
 
-    masterData[masterCounter]=centroidLong;
+    masterData[masterCounter]=(centroidLong*180/Math.PI).toPrecision(10); // centroid long converted from rad to deg
     masterCounter++;
 
-    for(var j=0;j<GPSClickedCoordsProbeDrop.length;j++)
-    {
-        masterData[masterCounter]=GPSClickedCoordsProbeDrop[j];
-        masterCounter++;
-    }
+    // for(var j=0;j<GPSClickedCoordsProbeDrop.length;j++)
+    // {
+    //     masterData[masterCounter]=GPSClickedCoordsProbeDrop[j];
+    //     masterCounter++;
+    // }
 
     for(var j=0;j<GPSClickedCoordsPointTarget.length;j++)
     {
-        masterData[masterCounter]=GPSClickedCoordsPointTarget[j];
+        // point target lat and long converted to rad even#=lat odd#=long
+        masterData[masterCounter]=(GPSClickedCoordsPointTarget[j]*180/Math.PI).toPrecision(10);
         masterCounter++;
     }
+
+    masterData[masterCounter]=QRCodeScannedData; // message from QR Code
+    masterCounter++;
 
     console.log(masterData);
     write2DataLog();
@@ -635,16 +659,27 @@ function write2DataLog()
 // Takes Clicked Pixel Coordinates and Calculates Distance From Known GPS Coordiate
 function pixelDistanceFromCenter()
 {
-    
-    deltaW= altitude*Math.tan((pixelW2-centerPixelWidth)*pixelWRad); // in m
-    deltaH= altitude*Math.tan((pixelH2-centerPixelHeight)*pixelHRad); // in m
-    distance= Math.sqrt(deltaW*deltaW+deltaH*deltaH); // in m
+    deltaW = (pixelW2-centerPixelWidth)*distPerPx_W; // m
+    deltaH = (pixelH2-centerPixelHeight)*distPerPx_H; // m
+
+    //alert("distPerPx_W: "+distPerPx_W+" distPerPx_H: "+distPerPx_H)
+
+    //alert("heading is: "+heading+" initial heading is: "+initialHeading); wtf is heading?????
+
+    //alert("deltaW: "+deltaW+" deltaH: "+deltaH);
+
+    deltaW_rotated = deltaW*Math.cos(initialHeading) + deltaH*Math.sin(initialHeading); // using rotation matrix tranformation
+    deltaH_rotated = -deltaW*Math.sin(initialHeading) + deltaH*Math.cos(initialHeading); // using rotation matrix transformation
+
+    //alert("deltaW: "+deltaW_rotated+" deltaH: "+deltaH_rotated);
+
+    distance = Math.sqrt(deltaW_rotated*deltaW_rotated+deltaH_rotated*deltaH_rotated); // converted distance in m accounting for heading
 };
 
 // Calculates new GPS Coordinate based on distance from known GPS Coordinate
 function computeNewCoordinates()
 {
-    lat2= (Math.asin(Math.sin(lat1)*Math.cos(distance/R) + Math.cos(lat1)*Math.sin(distance/R)*Math.cos(heading)));//*180/Math.PI;
+    lat2 = (Math.asin(Math.sin(lat1)*Math.cos(distance/R) + Math.cos(lat1)*Math.sin(distance/R)*Math.cos(heading)));//*180/Math.PI;
     long2 = (long1 + Math.atan2(Math.sin(heading)*Math.sin(distance/R)*Math.cos(lat1), Math.cos(distance/R)-Math.sin(lat1)*Math.sin(lat2)));//*180/Math.PI;
 };
 
