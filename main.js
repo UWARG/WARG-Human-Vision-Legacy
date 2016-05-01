@@ -192,7 +192,7 @@ document.getElementById("NoTarget").onclick = function transferDeleted()
             if (err) throw err;
             //console.log(files3);        
             
-            fs.rename("Images_2_Process/" + files3[0],"Deleted/" + files3[0], function(err) 
+            fs.rename("Images_2_Process/" + files3[1],"Deleted/" + files3[1], function(err) 
                 {
                     if (err) throw err;
                     alert("File successfully Deleted");
@@ -211,45 +211,51 @@ document.getElementById("Load").onclick = function loadNewImage()
     fs.readdir("Images_2_Process", function(err, files2)
     {
         if (err) throw err;
-        //console.log(files2);
+        console.log(files2);
 
-        address2 = "Images_2_Process/" + files2[0];
+        address2 = "Images_2_Process/" + files2[1];
 
         var img = new Image();
         img.src = address2;
 
-        // Retrives metadata from image
-        // new ExifImage({ image : address2 }, function (error, exifData) {
-        // if (error)
-        // console.log("Error: "+error.message);
-        // else
-        //     meta = exifData.exif.UserComment.toString();
-        //     meta_Data = meta.split(" "); // 0 = Lat, 1=Long, 2=Altitude, 3=Heading, 4=Timestamp (optional)
-        //     console.log(meta_Data);
-        // });
-    
-    //Reading metadata from .txt files
-    fs.readdir("Metadata", function(err, files4)
-    {
-        if (err) throw err;
+        //Retrives metadata from image
+        new ExifImage({ image : address2 }, function (error, exifData) {
+            if (error) {
+                console.log("Error: "+error.message);
+            }
             
-        address4 = "Metadata/" + files4[0];
-        
-        // Asynchronous read data from file into an array
-        fs.readFile(address4, "UTF-8", function (err, data) 
-        {
-            if (err) {
-
-                throw err;
-            }
             else {
-                imageData = data.split(","); // removes all "," from the string so "1,2,3" => "1","2","3"
-
-                metadata2Variables();
-            }
-        });
-
+            meta = exifData.exif.UserComment.toString().trim();
+            console.log(meta);
+            meta_Data = meta.split(" "); // 0 = Lat, 1=Long, 2=Altitude, 3=Heading, 4=Timestamp (optional)
+            
+            
+            metadata2Variables();
+        }
     });
+
+    //Reading metadata from .txt files
+    // fs.readdir("Metadata", function(err, files4)
+    // {
+    //     if (err) throw err;
+            
+    //     address4 = "Metadata/" + files4[0];
+        
+    //     // Asynchronous read data from file into an array
+    //     fs.readFile(address4, "UTF-8", function (err, data) 
+    //     {
+    //         if (err) {
+
+    //             throw err;
+    //         }
+    //         else {
+    //             imageData = data.split(","); // removes all "," from the string so "1,2,3" => "1","2","3"
+
+    //             metadata2Variables();
+    //         }
+    //     });
+
+    // });
 
         img.onload = function() 
         {
@@ -272,12 +278,12 @@ document.getElementById("SelectVerticies").onclick = function SelectVerticies()
     coordinates[counter]=document.addEventListener("dblclick", getSelectVerticies, false);
 };
 
-// document.getElementById("ProbeDropLoc").onclick = function ProbeDropLoc()
-// {
-//     removeEventListeners();
+document.getElementById("ProbeDropLoc").onclick = function ProbeDropLoc()
+{
+    removeEventListeners();
 
-//     probeDropCoords[countPD]=document.addEventListener("dblclick",getProbeDropCoords,false);
-// }
+    probeDropCoords[countPD]=document.addEventListener("dblclick",getProbeDropCoords,false);
+}
 
 document.getElementById("PointTarget").onclick = function PointTrargetLoc()
 {
@@ -324,7 +330,7 @@ document.getElementById("Process").onclick = function transferProcessed()
 
         data2Master();
 
-        fs.rename("Images_2_Process/" + files3[0],"Processed_Images/" + files3[0], function(err)
+        fs.rename("Images_2_Process/" + files3[1],"Processed_Images/" + files3[1], function(err)
         {
             if (err) throw err;
             alert("File successfully Processed");
@@ -568,19 +574,28 @@ function connectClickedPoints()
 *************************************************************************************************/
 function metadata2Variables()
 {
-    lat1=imageData[0]*Math.PI/180; // converts deg to rad
-    long1=imageData[1]*Math.PI/180; // converts deg to rad
-    altitude=imageData[2]; // recieves in meters
-    initialHeading=imageData[3]*Math.PI/180; // converts deg to rad
-    timestamp=imageData[4];
+    // lat1=imageData[0]*Math.PI/180; // converts deg to rad
+    // long1=imageData[1]*Math.PI/180; // converts deg to rad
+    // altitude=imageData[2]; // recieves in meters
+    // initialHeading=(imageData[3]+180)*Math.PI/180; // converts deg to rad 180 deg added because camera faces backawards to flight direction
+    // timestamp=imageData[4];
 
-    // Assigning metadata read from image
+    //Assigning metadata read from image
+    console.log("Test: "+meta_Data[0]);
 
-    // lat1=meta_Data[0]*Math.PI/180; // converts deg to rad
-    // long1=meta_Data[1]*Math.PI/180; // converts deg to rad
-    // altitude=meta_Data[2]; // recieves in meters
-    // initialHeading=meta_Data[3]*Math.PI/180; // converts deg to rad
-    // timestamp=meta_Data[4];
+    lat1=(Number(meta_Data[0].match(/[0-9].+/)[0]))*Math.PI/180; // converts deg to rad
+    long1=(Number(meta_Data[1]))*Math.PI/180; // converts deg to rad
+    altitude=Number(meta_Data[2]); // recieves in meters
+    initialHeading=Number(meta_Data[3]+180)*Math.PI/180; // converts deg to rad 180 deg added because camera faces backwards flight direction
+    timestamp=Number(meta_Data[4]);
+    
+    // console.log(meta_Data)
+
+    // console.log(lat1)
+    // console.log(long1)
+     console.log(altitude)
+    // console.log(initialHeading)
+    // console.log(timestamp)
 }
 
 function transferQRCodeImage()
@@ -625,20 +640,32 @@ function data2Master()
     masterData[masterCounter]=(centroidLong*180/Math.PI).toPrecision(10); // centroid long converted from rad to deg
     masterCounter++;
 
-    // for(var j=0;j<GPSClickedCoordsProbeDrop.length;j++)
-    // {
-    //     masterData[masterCounter]=GPSClickedCoordsProbeDrop[j];
-    //     masterCounter++;
-    // }
+    masterData[masterCounter]=(GPSClickedCoordsProbeDrop[0]*180/Math.PI).toPrecision(10); // Probe lat
+    masterCounter++;
 
-    for(var j=0;j<GPSClickedCoordsPointTarget.length;j++)
-    {
-        // point target lat and long converted to rad even#=lat odd#=long
-        masterData[masterCounter]=(GPSClickedCoordsPointTarget[j]*180/Math.PI).toPrecision(10);
-        masterCounter++;
-    }
+    masterData[masterCounter]=(GPSClickedCoordsProbeDrop[1]*180/Math.PI).toPrecision(10); // Probe long
+    masterCounter++;   
 
     masterData[masterCounter]=QRCodeScannedData; // message from QR Code
+    masterCounter++; 
+    
+    // point target lat and long converted to rad even#=lat odd#=long
+    masterData[masterCounter]=(GPSClickedCoordsPointTarget[0]*180/Math.PI).toPrecision(10);
+    masterCounter++;
+
+    masterData[masterCounter]=(GPSClickedCoordsPointTarget[1]*180/Math.PI).toPrecision(10);
+    masterCounter++;
+    
+    masterData[masterCounter]=(GPSClickedCoordsPointTarget[2]*180/Math.PI).toPrecision(10);
+    masterCounter++;
+    
+    masterData[masterCounter]=(GPSClickedCoordsPointTarget[3]*180/Math.PI).toPrecision(10);
+    masterCounter++;
+    
+    masterData[masterCounter]=(GPSClickedCoordsPointTarget[4]*180/Math.PI).toPrecision(10);
+    masterCounter++;
+    
+    masterData[masterCounter]=(GPSClickedCoordsPointTarget[5]*180/Math.PI).toPrecision(10);
     masterCounter++;
 
     console.log(masterData);
@@ -662,16 +689,8 @@ function pixelDistanceFromCenter()
     deltaW = (pixelW2-centerPixelWidth)*distPerPx_W; // m
     deltaH = (pixelH2-centerPixelHeight)*distPerPx_H; // m
 
-    //alert("distPerPx_W: "+distPerPx_W+" distPerPx_H: "+distPerPx_H)
-
-    //alert("heading is: "+heading+" initial heading is: "+initialHeading); wtf is heading?????
-
-    //alert("deltaW: "+deltaW+" deltaH: "+deltaH);
-
     deltaW_rotated = deltaW*Math.cos(initialHeading) + deltaH*Math.sin(initialHeading); // using rotation matrix tranformation
     deltaH_rotated = -deltaW*Math.sin(initialHeading) + deltaH*Math.cos(initialHeading); // using rotation matrix transformation
-
-    //alert("deltaW: "+deltaW_rotated+" deltaH: "+deltaH_rotated);
 
     distance = Math.sqrt(deltaW_rotated*deltaW_rotated+deltaH_rotated*deltaH_rotated); // converted distance in m accounting for heading
 };
