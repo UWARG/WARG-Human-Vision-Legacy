@@ -24,29 +24,14 @@ var R = 6371000 // m
 var aspectRatio = 1.7777; //1920/1080 (16:9)
 
 // Image constants based on image size
+var imageWidth = document.getElementById('myCanvas').width;
+var imageHeight = imageWidth/aspectRatio; //quick and dirty way to maintain aspect ratio
 
-var imageWidth;
-var imageHeight;
-var centerPixelWidth;
-var centerPixelHeight;
-var distPerPx_W;
-var distPerPx_H;
-var FOV_W = 90*Math.PI/180 // FOV deg converted to rad
-var FOV_H = 50.6*Math.PI/180; // 50.6 FOV deg converted to rad
+var centerPixelWidth = Math.round(imageWidth/2); // width coord of center pixel
+var centerPixelHeight = Math.round(imageHeight/2); // height coord of center pixel
 
-function imageConstants()
-{  
-    imageWidth = document.getElementById('myCanvas').width;
-    imageHeight = imageWidth/aspectRatio; //quick and dirty way to maintain aspect ratio
-
-    centerPixelWidth = Math.round(imageWidth/2); // width coord of center pixel
-    centerPixelHeight = Math.round(imageHeight/2); // height coord of center pixel
-
-    distPerPx_W = altitude*Math.tan(FOV_W/2)/(imageWidth/2);
-    distPerPx_H = altitude*Math.tan(FOV_H/2)/(imageHeight/2);
-
-    //alert("distPerPx_W: "+distPerPx_W+" distPerPx_H: "+distPerPx_H);
-}
+var pixelWRad = (90/imageWidth)*Math.PI/180; //M_FOV_W  rad comes from Width IFOV
+var pixelHRad = (55/imageHeight)*Math.PI/180; //M_FOV_H  rad comes from Height IFOV
 
 // Data obtained from metadata
 var timestamp; // Timestamp when image was taken
@@ -66,8 +51,6 @@ var lat2; // calculated latitude of selected point
 var long2; // calculated longitude of selected point
 var deltaW; // distance from GPS Latitude coodinate to selected Coordinate Latitude on the ground
 var deltaH; // distance from GPS Longitude coodinate to selected Coordinate Longitude on the ground
-var deltaW_rotated // converted distance from GPS Latitude corrdinate taking into account the aircrafts heading
-var deltaH_rotated // converted distance from GPS Longitude corrdinated taking into account the aircrafts heading
 var distance; // distance on the ground between the center GPS Coordinate and the Selected Coordinate
 
 var address2; // Address for first document in the Images2Process folder
@@ -130,10 +113,6 @@ var meta_Data = new Array(); // Splits the string into component strings, isolat
 var address4; // Address for first text file corresponding to loaded image
 var imageData = new Array(); // Stores metadata read from file
 
-$(window).resize(function() {
-    // not doing anything with this resize but it works
-})
-
 /*************************************************************************************************
                         Function For Resetting All Variables
 *************************************************************************************************/
@@ -192,7 +171,7 @@ document.getElementById("NoTarget").onclick = function transferDeleted()
             if (err) throw err;
             //console.log(files3);        
             
-            fs.rename("Images_2_Process/" + files3[1],"Deleted/" + files3[1], function(err) 
+            fs.rename("Images_2_Process/" + files3[0],"Deleted/" + files3[0], function(err) 
                 {
                     if (err) throw err;
                     alert("File successfully Deleted");
@@ -211,30 +190,36 @@ document.getElementById("Load").onclick = function loadNewImage()
     fs.readdir("Images_2_Process", function(err, files2)
     {
         if (err) throw err;
-        console.log(files2);
+        //console.log(files2);
 
-        address2 = "Images_2_Process/" + files2[1];
+        address2 = "Images_2_Process/" + files2[0];
 
         var img = new Image();
         img.src = address2;
 
         //Retrives metadata from image
         new ExifImage({ image : address2 }, function (error, exifData) {
-            if (error) {
-                console.log("Error: "+error.message);
-            }
-            
-            else {
-            meta = exifData.exif.UserComment.toString().trim();
-            console.log(meta);
+        if (error)
+        console.log("Error: "+error.message);
+        else
+            meta = exifData.exif.UserComment.toString();
             meta_Data = meta.split(" "); // 0 = Lat, 1=Long, 2=Altitude, 3=Heading, 4=Timestamp (optional)
-            
-            
-            metadata2Variables();
-        }
-    });
+            console.log("This"+" "+meta);
 
-    //Reading metadata from .txt files
+            metadata2Variables();
+        });
+
+        img.onload = function() 
+        {
+            var canvas = document.getElementById('myCanvas');
+            var ctx = canvas.getContext('2d');
+            //ctx.translate(canvas.width,0);
+            //ctx.rotate(90*Math.PI/180);
+            ctx.drawImage(img,0,0,imageWidth,imageHeight);
+            img.style.display = 'none';
+        };
+
+                //Reading metadata from .txt files
     // fs.readdir("Metadata", function(err, files4)
     // {
     //     if (err) throw err;
@@ -256,15 +241,6 @@ document.getElementById("Load").onclick = function loadNewImage()
     //     });
 
     // });
-
-        img.onload = function() 
-        {
-            imageConstants();
-            var canvas = document.getElementById('myCanvas');
-            var ctx = canvas.getContext('2d');
-            ctx.drawImage(img,0,0,imageWidth,imageHeight);
-            img.style.display = 'none';
-        };
 
     });
 
@@ -330,7 +306,7 @@ document.getElementById("Process").onclick = function transferProcessed()
 
         data2Master();
 
-        fs.rename("Images_2_Process/" + files3[1],"Processed_Images/" + files3[1], function(err)
+        fs.rename("Images_2_Process/" + files3[0],"Processed_Images/" + files3[0], function(err)
         {
             if (err) throw err;
             alert("File successfully Processed");
@@ -577,25 +553,15 @@ function metadata2Variables()
     // lat1=imageData[0]*Math.PI/180; // converts deg to rad
     // long1=imageData[1]*Math.PI/180; // converts deg to rad
     // altitude=imageData[2]; // recieves in meters
-    // initialHeading=(imageData[3]+180)*Math.PI/180; // converts deg to rad 180 deg added because camera faces backawards to flight direction
+    // initialHeading=imageData[3]*Math.PI/180; // converts deg to rad
     // timestamp=imageData[4];
 
-    //Assigning metadata read from image
-    console.log("Test: "+meta_Data[0]);
-
+    // Assigning metadata read from image
     lat1=(Number(meta_Data[0].match(/[0-9].+/)[0]))*Math.PI/180; // converts deg to rad
     long1=(Number(meta_Data[1]))*Math.PI/180; // converts deg to rad
-    altitude=Number(meta_Data[2]); // recieves in meters
+    altitude=Number(meta_Data[2]); //Number(meta_Data[2]); // recieves in meters
     initialHeading=Number(meta_Data[3]+180)*Math.PI/180; // converts deg to rad 180 deg added because camera faces backwards flight direction
     timestamp=Number(meta_Data[4]);
-    
-    // console.log(meta_Data)
-
-    // console.log(lat1)
-    // console.log(long1)
-     console.log(altitude)
-    // console.log(initialHeading)
-    // console.log(timestamp)
 }
 
 function transferQRCodeImage()
@@ -627,46 +593,30 @@ function data2Master()
 
     var now = new moment();
     
-    masterData[0]=now.format("HH:mm:ss"); // timestamp
+    masterData[0]=now.format("HH:mm:ss");
 
     masterCounter=1;
 
-    masterData[masterCounter]=AreaTotal.toPrecision(5); //area
+    masterData[masterCounter]=A;
     masterCounter++;
 
-    masterData[masterCounter]=(centroidLat*180/Math.PI).toPrecision(10); // centroid lat converted from rad to deg
+    masterData[masterCounter]=centroidLat;
     masterCounter++;
 
-    masterData[masterCounter]=(centroidLong*180/Math.PI).toPrecision(10); // centroid long converted from rad to deg
+    masterData[masterCounter]=centroidLong;
     masterCounter++;
 
-    masterData[masterCounter]=(GPSClickedCoordsProbeDrop[0]*180/Math.PI).toPrecision(10); // Probe lat
-    masterCounter++;
+    for(var j=0;j<GPSClickedCoordsProbeDrop.length;j++)
+    {
+        masterData[masterCounter]=GPSClickedCoordsProbeDrop[j];
+        masterCounter++;
+    }
 
-    masterData[masterCounter]=(GPSClickedCoordsProbeDrop[1]*180/Math.PI).toPrecision(10); // Probe long
-    masterCounter++;   
-
-    masterData[masterCounter]=QRCodeScannedData; // message from QR Code
-    masterCounter++; 
-    
-    // point target lat and long converted to rad even#=lat odd#=long
-    masterData[masterCounter]=(GPSClickedCoordsPointTarget[0]*180/Math.PI).toPrecision(10);
-    masterCounter++;
-
-    masterData[masterCounter]=(GPSClickedCoordsPointTarget[1]*180/Math.PI).toPrecision(10);
-    masterCounter++;
-    
-    masterData[masterCounter]=(GPSClickedCoordsPointTarget[2]*180/Math.PI).toPrecision(10);
-    masterCounter++;
-    
-    masterData[masterCounter]=(GPSClickedCoordsPointTarget[3]*180/Math.PI).toPrecision(10);
-    masterCounter++;
-    
-    masterData[masterCounter]=(GPSClickedCoordsPointTarget[4]*180/Math.PI).toPrecision(10);
-    masterCounter++;
-    
-    masterData[masterCounter]=(GPSClickedCoordsPointTarget[5]*180/Math.PI).toPrecision(10);
-    masterCounter++;
+    for(var j=0;j<GPSClickedCoordsPointTarget.length;j++)
+    {
+        masterData[masterCounter]=GPSClickedCoordsPointTarget[j];
+        masterCounter++;
+    }
 
     console.log(masterData);
     write2DataLog();
@@ -686,19 +636,16 @@ function write2DataLog()
 // Takes Clicked Pixel Coordinates and Calculates Distance From Known GPS Coordiate
 function pixelDistanceFromCenter()
 {
-    deltaW = (pixelW2-centerPixelWidth)*distPerPx_W; // m
-    deltaH = (pixelH2-centerPixelHeight)*distPerPx_H; // m
-
-    deltaW_rotated = deltaW*Math.cos(initialHeading) + deltaH*Math.sin(initialHeading); // using rotation matrix tranformation
-    deltaH_rotated = -deltaW*Math.sin(initialHeading) + deltaH*Math.cos(initialHeading); // using rotation matrix transformation
-
-    distance = Math.sqrt(deltaW_rotated*deltaW_rotated+deltaH_rotated*deltaH_rotated); // converted distance in m accounting for heading
+    
+    deltaW= altitude*Math.tan((pixelW2-centerPixelWidth)*pixelWRad); // in m
+    deltaH= altitude*Math.tan((pixelH2-centerPixelHeight)*pixelHRad); // in m
+    distance= Math.sqrt(deltaW*deltaW+deltaH*deltaH); // in m
 };
 
 // Calculates new GPS Coordinate based on distance from known GPS Coordinate
 function computeNewCoordinates()
 {
-    lat2 = (Math.asin(Math.sin(lat1)*Math.cos(distance/R) + Math.cos(lat1)*Math.sin(distance/R)*Math.cos(heading)));//*180/Math.PI;
+    lat2= (Math.asin(Math.sin(lat1)*Math.cos(distance/R) + Math.cos(lat1)*Math.sin(distance/R)*Math.cos(heading)));//*180/Math.PI;
     long2 = (long1 + Math.atan2(Math.sin(heading)*Math.sin(distance/R)*Math.cos(lat1), Math.cos(distance/R)-Math.sin(lat1)*Math.sin(lat2)));//*180/Math.PI;
 };
 
